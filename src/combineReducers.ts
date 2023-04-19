@@ -11,6 +11,14 @@ import isPlainObject from './utils/isPlainObject'
 import warning from './utils/warning'
 import { kindOf } from './utils/kindOf'
 
+// Reducer to handle Map and Set data types
+function mapSetStateReducer(state: any, action: AnyAction) {
+  if (state instanceof Map || state instanceof Set) {
+    return new Map(state);
+  }
+  return state;
+}
+
 function getUnexpectedStateShapeWarningMessage(
   inputState: object,
   reducers: { [key: string]: Reducer<any, any, any> },
@@ -123,6 +131,9 @@ export default function combineReducers<M>(
 export default function combineReducers(reducers: {
   [key: string]: Reducer<any, any, any>
 }) {
+  // Add the mapSetStateReducer to the reducers object
+  reducers['mapSetStateReducer'] = mapSetStateReducer;
+
   const reducerKeys = Object.keys(reducers)
   const finalReducers: { [key: string]: Reducer<any, any, any> } = {}
   for (let i = 0; i < reducerKeys.length; i++) {
@@ -181,6 +192,7 @@ export default function combineReducers(reducers: {
       const reducer = finalReducers[key]
       const previousStateForKey = state[key]
       const nextStateForKey = reducer(previousStateForKey, action)
+
       if (typeof nextStateForKey === 'undefined') {
         const actionType = action && action.type
         throw new Error(
@@ -192,7 +204,9 @@ export default function combineReducers(reducers: {
         )
       }
       nextState[key] = nextStateForKey
-      hasChanged = hasChanged || nextStateForKey !== previousStateForKey
+      hasChanged =
+      hasChanged || finalReducerKeys.length !== Object.keys(state).length
+    return hasChanged ? nextState : state
     }
     hasChanged =
       hasChanged || finalReducerKeys.length !== Object.keys(state).length
